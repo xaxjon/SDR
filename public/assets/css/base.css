@@ -738,3 +738,33 @@ input[type="range"]::-moz-range-thumb {
   .rack { padding: 16px 14px 10px; }
   .rack-ear { display: none; }
 }
+
+/* receiver selector (main menu) */
+.rx-select {
+  background: #14181c;
+  color: #7fd0ff;
+  border: 1px solid #333;
+  border-radius: 4px;
+  margin-left: 12px;
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 8px;
+}
+
+/* external-receiver badges (radio panel) */
+#ext-badge, #hf-warn {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #ffb347;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,179,71,0.4);
+  border-radius: 4px;
+  padding: 3px 10px;
+  pointer-events: none;
+}
+#hf-warn { top: 32px; color: #ff7a7a; border-color: rgba(255,122,122,0.4); }
+.panel { position: relative; }

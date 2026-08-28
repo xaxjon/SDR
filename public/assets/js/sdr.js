@@ -62,6 +62,7 @@
       try { m = JSON.parse(text); } catch (e) { return; }
       if (m.type === 'status') this._emit('status', m);
       else if (m.type === 'scan_hit') this._emit('scan_hit', m);
+      else if (m.type === 'receivers') this._emit('receivers', m);
       else if (m.type === 'error') this._emit('proto_error', m);
     }
 
@@ -96,6 +97,8 @@
     tune(freqHz, mode) { this.send({ cmd: 'tune', freq: Math.round(freqHz), mode: mode }); }
     setSquelch(level) { this.send({ cmd: 'squelch', level: level }); }
     fft(enable) { this.send({ cmd: 'fft', enable: !!enable }); }
+    getReceivers() { this.send({ cmd: 'receivers' }); }
+    setReceiver(id) { this.send({ cmd: 'receiver', id: id }); }
     scan(channels) {
       this.send({ cmd: 'scan', channels: channels, dwell_ms: 220, hold_ms: 1500, threshold_db: 12 });
     }

@@ -24,6 +24,8 @@
 {"cmd":"stop_scan"}
 {"cmd":"sweep","start":87500000,"stop":108000000}
 {"cmd":"stop_sweep"}
+{"cmd":"receivers"}
+{"cmd":"receiver","id":"pcr1000"}
 ```
 
 - `mode`: `wfm` (broadcast FM), `nfm` (marine/land mobile), `am`
@@ -31,9 +33,26 @@
 - `squelch.level` 0..1: 0 = always open; higher = stronger signal required.
 - `scan`: daemon hops channels at `dwell_ms` each; when a channel exceeds
   `threshold_db` over the noise floor it holds and streams audio until the
-  signal drops plus `hold_ms`.
+  signal drops plus `hold_ms`. Minimum effective dwell 200 ms.
 - `sweep`: continuously sweeps start..stop in ~1.92 MHz steps (20% overlap)
   streaming one FFT frame per step; wraps until `stop_sweep`.
+- `receivers` / `receiver`: list / switch the active receiver (below).
+
+### Receivers
+
+The daemon always has `rtl0` (the RTL2832U SDR). Started with
+`--icom-port /dev/ttyUSBx [--icom-model pcr1000|pcr1500]` it also exposes
+that ICOM PCR receiver — control-only: audio comes from the radio's own
+speaker, so no audio/FFT frames while it is active, and `fft`/`sweep`
+commands return an error. On switch (and on `receivers`), the daemon
+broadcasts:
+
+```json
+{"type":"receivers","list":[{"id":"rtl0","name":"RTL-SDR (built-in SDR)","audio":true,"fft":true},{"id":"pcr1000","name":"ICOM PCR1000 (external)","audio":false,"fft":false}],"active":"pcr1000"}
+```
+
+`status` frames carry `receiver`, `audio`, `fft` fields so the UI can adapt
+(dim volume, hide waterfall) when an external receiver is active.
 
 ### Daemon -> client
 

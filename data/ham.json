@@ -1,0 +1,19 @@
+{
+  "service": "ham",
+  "mode": "usb",
+  "band": {"start": 1800000, "stop": 29700000},
+  "step": 1000,
+  "presets": [
+    {"label": "160m", "freq": 1900000, "mode": "lsb"},
+    {"label": "80m", "freq": 3750000, "mode": "lsb"},
+    {"label": "40m", "freq": 7150000, "mode": "lsb"},
+    {"label": "30m", "freq": 10120000, "mode": "usb"},
+    {"label": "20m", "freq": 14200000, "mode": "usb"},
+    {"label": "17m", "freq": 18110000, "mode": "usb"},
+    {"label": "15m", "freq": 21300000, "mode": "usb"},
+    {"label": "12m", "freq": 24940000, "mode": "usb"},
+    {"label": "10m", "freq": 28400000, "mode": "usb"},
+    {"label": "6m", "freq": 50100000, "mode": "usb"},
+    {"label": "2m call", "freq": 146520000, "mode": "nfm"}
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "service": "marinehf",
+  "mode": "usb",
+  "band": {"start": 2000000, "stop": 26100000},
+  "step": 1000,
+  "presets": [
+    {"label": "2182 distress", "freq": 2182000, "mode": "usb"},
+    {"label": "2.638", "freq": 2638000, "mode": "usb"},
+    {"label": "4.146", "freq": 4146000, "mode": "usb"},
+    {"label": "6.224", "freq": 6224000, "mode": "usb"},
+    {"label": "8.294", "freq": 8294000, "mode": "usb"},
+    {"label": "12.353", "freq": 12353000, "mode": "usb"},
+    {"label": "16.528", "freq": 16528000, "mode": "usb"},
+    {"label": "18.825", "freq": 18825000, "mode": "usb"},
+    {"label": "22.159", "freq": 22159000, "mode": "usb"},
+    {"label": "25.100", "freq": 25100000, "mode": "usb"},
+    {"label": "Shanwick VOLMET", "freq": 5505000, "mode": "usb"},
+    {"label": "Gander VOLMET", "freq": 10051000, "mode": "usb"},
+    {"label": "LDOC 8.867", "freq": 8867000, "mode": "usb"},
+    {"label": "LDOC 13.261", "freq": 13261000, "mode": "usb"}
+  ]
+}

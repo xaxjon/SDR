@@ -7,6 +7,8 @@ Type=simple
 User=jon
 WorkingDirectory=/home/jon/kimi/SDRADIO
 ExecStart=/usr/bin/python3 /home/jon/kimi/SDRADIO/bin/sdrd.py --host 0.0.0.0 --port 8765
+# To also drive an ICOM PCR receiver, append e.g.:
+#   --icom-port /dev/ttyUSB0 --icom-model pcr1000
 Restart=on-failure
 RestartSec=3
 

@@ -7,8 +7,9 @@ $entries = [
     ['COMMERCIAL VHF',     'radio.php?svc=vhf',     '150 – 174 MHz · NFM · land mobile', true],
     ['FM BROADCAST',       'radio.php?svc=fm',      '87.5 – 108 MHz · WFM stereo band', true],
     ['SPECTRUM ANALYZER',  'spectrum.php',          'wideband sweep · waterfall · peak find', true],
-    ['SHORTWAVE',          null,                    'needs HF upconverter', false],
-    ['HAM SSB',            null,                    'needs HF upconverter', false],
+    ['SHORTWAVE',          'radio.php?svc=sw',      '3 – 26 MHz · AM · needs external receiver', true],
+    ['HAM SSB',            'radio.php?svc=ham',     '160 – 10 m · SSB · needs external receiver', true],
+    ['MARINE / AIR HF',    'radio.php?svc=marinehf','2 – 25 MHz · USB · needs external receiver', true],
 ];
 ?>
 <!DOCTYPE html>
@@ -30,6 +31,7 @@ $entries = [
     <div class="connbox">
       <span id="conn-led" class="led"></span>
       <span id="conn-text">CHECKING…</span>
+      <select id="rx-select" class="rx-select" style="display:none" title="Active receiver"></select>
     </div>
   </div>
 
@@ -72,7 +74,36 @@ $entries = [
       try { ws.close(); } catch (e) {}
       setTimeout(ping, 5000);
     }
-    ws.onopen = function () { set(true); };
+    ws.onopen = function () {
+      // keep the socket briefly to fetch the receiver list
+      ws.onmessage = function (ev) {
+        try {
+          var d = JSON.parse(ev.data);
+          if (d.type === 'receivers') {
+            var sel = document.getElementById('rx-select');
+            if (d.list.length > 1) {
+              sel.innerHTML = '';
+              d.list.forEach(function (r) {
+                var o = document.createElement('option');
+                o.value = r.id; o.textContent = r.name;
+                if (r.id === d.active) o.selected = true;
+                sel.appendChild(o);
+              });
+              sel.style.display = '';
+              sel.onchange = function () {
+                var ws2 = new WebSocket('ws://' + location.hostname + ':8765');
+                ws2.onopen = function () {
+                  ws2.send(JSON.stringify({cmd: 'receiver', id: sel.value}));
+                  setTimeout(function () { ws2.close(); }, 300);
+                };
+              };
+            }
+          }
+        } catch (e) {}
+      };
+      ws.send(JSON.stringify({cmd: 'receivers'}));
+      set(true);
+    };
     ws.onerror = function () { set(false); };
     ws.onclose = function () { set(false); };
   }

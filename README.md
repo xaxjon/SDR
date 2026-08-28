@@ -18,6 +18,9 @@ No root. No librtlsdr. No build step. No internet required.
 | **Commercial VHF** | 150–174 MHz | NFM | presets + free tuning |
 | **FM Broadcast** | 87.5–108 MHz | WFM | presets, click-to-tune waterfall |
 | **Spectrum Analyzer** | any, 24–1766 MHz | — | swept wideband waterfall + trace, max-hold, peak detect, click a peak to open the right receiver pre-tuned |
+| **Shortwave** | 3–26 MHz | AM | via ICOM PCR receiver: broadcast band presets |
+| **Ham SSB** | 160–10 m | USB/LSB | via ICOM PCR receiver: per-band presets with correct sideband |
+| **Marine / Air HF** | 2–25 MHz | USB | via ICOM PCR receiver: distress/simplex/VOLMET presets |
 
 Every radio panel: glowing LCD, S-meter, squelch with SQL LED, tuning knob,
 numeric keypad, step buttons, SCAN with active-channel banner, and a live
@@ -33,9 +36,35 @@ click-to-tune waterfall strip.
 
 - Any RTL2832U + R820T(2) USB dongle (the ~$10 DVB-T kind) and its antenna.
 - Tuning range 24–1766 MHz. **HF (shortwave, AM broadcast, marine/air HF
-  SSB) is below the tuner's reach** — the menu shows those as placeholders.
-  Add a ~$40 upconverter (or a dongle with direct sampling like the
-  RTL-SDR Blog V4) later; the USB/LSB demodulators are already implemented.
+  SSB) is below the tuner's reach** — but see the next section: an ICOM PCR
+  receiver covers all of it.
+- Optional: **ICOM PCR1000 / PCR1500** receiver (serial/USB control).
+
+## External receivers (ICOM PCR1000 / PCR1500)
+
+SDRADIO can remote-control an ICOM PCR receiver as a second "source".
+Audio stays on the radio's own speaker — the web UI becomes its control
+head: tune, mode/filter, squelch, S-meter, and channel scan all work, and
+the SHORTWAVE / HAM SSB / MARINE-AIR HF pages are made for it (the PCRs
+cover 0.01–1300/3300 MHz, all modes).
+
+```bash
+# PCR1000 on a USB-serial adapter, or PCR1500 on its USB cable:
+python3 bin/sdrd.py --icom-port /dev/ttyUSB0 --icom-model pcr1000
+# (or edit start.sh / the systemd unit to add the same flags)
+```
+
+A receiver dropdown appears on the main menu when more than one receiver
+is present. With the ICOM active, the panel dims its volume control and
+hides the waterfall (the radio has no digitized IF) and shows an
+"EXT RX — audio on receiver speaker" badge.
+
+No pyserial needed — the driver (`bin/icom.py`) uses stdlib termios.
+`bin/pcr_emulator.py` fakes a PCR1000 on a PTY for hardware-free testing.
+
+(Without an ICOM, HF is still possible later via a ~$40 upconverter or a
+dongle with direct sampling like the RTL-SDR Blog V4 — the USB/LSB
+demodulators are already implemented.)
 
 ## Software requirements
 
@@ -138,7 +167,9 @@ behind a reverse proxy with auth if you expose it further.
 
 ## Roadmap
 
-- HF support via upconverter / direct sampling (USB/LSB demods ready)
+- RTL-SDR as panadapter for the ICOM receiver (shared waterfall)
+- HF via upconverter / direct sampling for the RTL stick (USB/LSB demods ready)
+- PCR1500 USB-audio streaming (browser audio for the external receiver)
 - RDS decode for FM broadcast
 - Audio recording from the browser
 - Multi-channel monitoring within the 2.4 MHz live bandwidth

@@ -1,0 +1,18 @@
+{
+  "service": "sw",
+  "mode": "am",
+  "band": {"start": 3000000, "stop": 26100000},
+  "step": 5000,
+  "presets": [
+    {"label": "WWV 5 MHz", "freq": 5000000},
+    {"label": "WWV 10 MHz", "freq": 10000000},
+    {"label": "WWV 15 MHz", "freq": 15000000},
+    {"label": "CHU 7.85", "freq": 7850000},
+    {"label": "49m band", "freq": 5950000},
+    {"label": "41m band", "freq": 7300000},
+    {"label": "31m band", "freq": 9500000},
+    {"label": "25m band", "freq": 11700000},
+    {"label": "19m band", "freq": 15100000},
+    {"label": "16m band", "freq": 17700000}
+  ]
+}

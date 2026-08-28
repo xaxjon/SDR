@@ -161,7 +161,8 @@ class Radio:
     def __init__(self, loop, hub):
         self.loop = loop
         self.hub = hub
-        self.broadcast = hub.broadcast      # fn(kind, payload) thread-safe
+        self._tx = hub.broadcast        # fn(kind, payload) thread-safe
+        self.active = True              # only the active receiver broadcasts
         self.cmdq = queue.Queue()
         self.freq = 107_282_000
         self.mode = 'wfm'
@@ -175,6 +176,10 @@ class Radio:
         self.running = True
         self.blocks = 0
         self.last_rate_log = 0.0
+
+    def broadcast(self, kind, payload):
+        if self.active:
+            self._tx(kind, payload)
 
     # -- commands from asyncio side ----------------------------------------
     def handle(self, msg):
@@ -386,10 +391,159 @@ class Radio:
               'squelch': self.squelch, 'scanning': self.scan is not None,
               'sweeping': self.sweep is not None,
               'rssi_db': -120.0, 'sql_open': self.sql_open,
-              'scan_label': ''}
+              'scan_label': '', 'receiver': 'rtl0',
+              'audio': True, 'fft': True}
         if extra:
             st.update(extra)
         self.broadcast('json', st)
+
+
+class IcomRadio:
+    """Worker thread: drives an ICOM PCR receiver over serial.
+
+    Control-only: audio comes from the receiver's own speaker, so no audio
+    frames and no FFT are ever produced. Squelch runs on the radio itself;
+    scan is done here by stepping channels and watching the radio's
+    squelch-status responses."""
+
+    SETTLE = 0.08     # let the radio's squelch react after a retune
+
+    def __init__(self, loop, hub, device, model='pcr1000'):
+        self.loop = loop
+        self.hub = hub
+        self._tx = hub.broadcast
+        self.active = False
+        self.cmdq = queue.Queue()
+        self.device = device
+        self.model = model
+        self.freq = 156_800_000
+        self.mode = 'nfm'
+        self.squelch = 0.3
+        self.scan = None
+        self.hold_until = 0.0
+        self.sql_open = False
+        self.level = 0
+        self.running = True
+
+    def broadcast(self, kind, payload):
+        if self.active:
+            self._tx(kind, payload)
+
+    # -- commands ------------------------------------------------------------
+    def handle(self, msg):
+        cmd = msg.get('cmd')
+        if cmd == 'tune':
+            self.freq = int(msg['freq'])
+            self.mode = msg.get('mode', self.mode)
+            self.scan = None
+            self.need_retune = True
+        elif cmd == 'squelch':
+            self.squelch = max(0.0, min(1.0, float(msg['level'])))
+            self.need_squelch = True
+        elif cmd == 'scan':
+            self.scan = dict(channels=msg['channels'],
+                             dwell=max(0.1, int(msg.get('dwell_ms', 150)) / 1000.0),
+                             hold=max(1, int(msg.get('hold_ms', 1500))) / 1000.0,
+                             idx=0, t0=0.0, t_tune=0.0)
+        elif cmd == 'stop_scan':
+            self.scan = None
+        elif cmd in ('fft', 'sweep'):
+            self.broadcast('json', {'type': 'error',
+                                    'message': 'no spectrum on external receiver'})
+        elif cmd == 'stop_sweep':
+            pass
+
+    # -- worker --------------------------------------------------------------
+    def run(self):
+        sys.path.insert(0, '/home/jon/kimi/SDRADIO/bin')
+        try:
+            from icom import Pcr
+            radio = Pcr(self.device)
+            radio.init_radio()
+            radio.tune(self.freq, self.mode)
+            radio.set_squelch(self.squelch)
+        except Exception as e:
+            self._tx('json', {'type': 'error',
+                              'message': 'ICOM open failed: %s' % e})
+            return
+        self.need_retune = False
+        self.need_squelch = False
+        last_status = 0.0
+        try:
+            while self.running:
+                while True:
+                    try:
+                        self.handle(self.cmdq.get_nowait())
+                    except queue.Empty:
+                        break
+                if self.need_retune:
+                    radio.tune(self.freq, self.mode)
+                    self.need_retune = False
+                if self.need_squelch:
+                    radio.set_squelch(self.squelch)
+                    self.need_squelch = False
+                now = time.monotonic()
+
+                if self.scan:
+                    sc = self.scan
+                    if now - sc['t0'] >= sc['dwell']:
+                        sc['t0'] = now
+                        sc['cur'] = sc['channels'][sc['idx']]
+                        sc['idx'] = (sc['idx'] + 1) % len(sc['channels'])
+                        self.freq = sc['cur']['f']
+                        self.mode = sc['cur'].get('m', 'nfm')
+                        radio.tune(self.freq, self.mode)
+                        sc['t_tune'] = now
+                    open_, lvl = radio.poll()
+                    self.sql_open, self.level = open_, lvl
+                    if (open_ and now >= self.hold_until
+                            and now - sc['t_tune'] > self.SETTLE):
+                        ch = sc['cur']
+                        self.broadcast('json', {'type': 'scan_hit',
+                                                'freq': ch['f'],
+                                                'label': ch.get('label', '')})
+                        # hold on the channel while the squelch stays open
+                        while self.running:
+                            try:
+                                m = self.cmdq.get_nowait()
+                                self.handle(m)
+                                if self.scan is None:
+                                    break
+                            except queue.Empty:
+                                pass
+                            o2, l2 = radio.poll()
+                            self.sql_open, self.level = o2, l2
+                            self._status()
+                            if not o2:
+                                self.hold_until = time.monotonic() + sc['hold']
+                                break
+                            time.sleep(0.1)
+                    self._status()
+                    continue
+
+                open_, lvl = radio.poll()
+                self.sql_open, self.level = open_, lvl
+                if now - last_status > 0.25:
+                    last_status = now
+                    self._status()
+                time.sleep(0.05)
+        except Exception as e:
+            self._tx('json', {'type': 'error', 'message': 'ICOM error: %s' % e})
+        finally:
+            try:
+                radio.close()
+            except Exception:
+                pass
+
+    def _status(self):
+        # raw 0..255 level -> familiar S-meter-ish dB scale
+        rssi = -70.0 + self.level * (60.0 / 255.0)
+        self.broadcast('json', {
+            'type': 'status', 'freq': self.freq, 'mode': self.mode,
+            'squelch': self.squelch, 'scanning': self.scan is not None,
+            'sweeping': False, 'rssi_db': round(rssi, 1),
+            'sql_open': bool(self.sql_open), 'scan_label': '',
+            'receiver': self.model, 'audio': False, 'fft': False})
 
 
 class Hub:
@@ -423,7 +577,63 @@ class Hub:
             pass
 
 
-async def client_handler(ws, path, hub, radio):
+RECEIVER_INFO = {
+    'rtl0':    {'id': 'rtl0',    'name': 'RTL-SDR (built-in SDR)',
+                'audio': True,  'fft': True},
+    'pcr1000': {'id': 'pcr1000', 'name': 'ICOM PCR1000 (external)',
+                'audio': False, 'fft': False},
+    'pcr1500': {'id': 'pcr1500', 'name': 'ICOM PCR1500 (external)',
+                'audio': False, 'fft': False},
+}
+
+
+class Router:
+    """Routes client commands to the active receiver worker."""
+
+    def __init__(self, workers, active_id):
+        self.workers = workers            # {id: Radio|IcomRadio}
+        self.active_id = active_id
+        for wid, w in workers.items():
+            w.active = (wid == active_id)
+
+    @property
+    def active(self):
+        return self.workers[self.active_id]
+
+    def route(self, msg):
+        cmd = msg.get('cmd')
+        if cmd == 'receivers':
+            self.broadcast_receivers()
+        elif cmd == 'receiver':
+            self.switch(msg.get('id'))
+        else:
+            self.active.cmdq.put(msg)
+
+    def switch(self, wid):
+        if wid not in self.workers or wid == self.active_id:
+            self.broadcast_receivers()
+            return
+        old = self.active
+        old.cmdq.put({'cmd': 'stop_scan'})
+        old.cmdq.put({'cmd': 'stop_sweep'})
+        old.active = False
+        self.active_id = wid
+        self.active.active = True
+        self.broadcast_receivers()
+
+    def broadcast_receivers(self):
+        self.active._tx('json', {
+            'type': 'receivers',
+            'list': [RECEIVER_INFO[w] for w in self.workers],
+            'active': self.active_id})
+
+    def stop_all(self):
+        for w in self.workers.values():
+            w.cmdq.put({'cmd': 'stop_scan'})
+            w.cmdq.put({'cmd': 'stop_sweep'})
+
+
+async def client_handler(ws, path, hub, router):
     hub.add(ws)
     try:
         async for raw in ws:
@@ -431,7 +641,7 @@ async def client_handler(ws, path, hub, radio):
                 msg = json.loads(raw)
             except ValueError:
                 continue
-            radio.cmdq.put(msg)
+            router.route(msg)
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
@@ -439,37 +649,47 @@ async def client_handler(ws, path, hub, radio):
         with hub.lock:
             empty = not hub.clients
         if empty:
-            radio.cmdq.put({'cmd': 'stop_scan'})
-            radio.cmdq.put({'cmd': 'stop_sweep'})
+            router.stop_all()
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8765)
+    ap.add_argument('--icom-port', default=None,
+                    help='serial device of an ICOM PCR receiver (e.g. /dev/ttyUSB0)')
+    ap.add_argument('--icom-model', default='pcr1000',
+                    choices=['pcr1000', 'pcr1500'])
     args = ap.parse_args()
     faulthandler.register(signal.SIGUSR1)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     hub = Hub(loop)
-    radio = Radio(loop, hub)
-    worker = threading.Thread(target=radio.run, daemon=True)
-    worker.start()
+
+    workers = {'rtl0': Radio(loop, hub)}
+    if args.icom_port:
+        workers[args.icom_model] = IcomRadio(loop, hub, args.icom_port,
+                                             args.icom_model)
+    for w in workers.values():
+        threading.Thread(target=w.run, daemon=True).start()
+    router = Router(workers, 'rtl0')
 
     async def handler(ws, path=None):
-        await client_handler(ws, path, hub, radio)
+        await client_handler(ws, path, hub, router)
 
     server = websockets.serve(handler, args.host, args.port,
                               ping_interval=20, ping_timeout=20,
                               max_queue=32)
     loop.run_until_complete(server)
-    print('sdrd listening on ws://%s:%d' % (args.host, args.port))
+    print('sdrd listening on ws://%s:%d (receivers: %s)'
+          % (args.host, args.port, ', '.join(workers)))
     try:
         loop.run_forever()
     except KeyboardInterrupt:
         pass
-    radio.running = False
+    for w in workers.values():
+        w.running = False
 
 
 if __name__ == '__main__':

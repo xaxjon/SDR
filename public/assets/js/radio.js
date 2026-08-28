@@ -270,7 +270,10 @@
       b.innerHTML = '<span class="preset-label"></span><span class="preset-freq"></span>';
       b.querySelector('.preset-label').textContent = p.label;
       b.querySelector('.preset-freq').textContent = fmtFreq(p.freq);
-      b.addEventListener('click', () => tuneTo(p.freq, true));
+      b.addEventListener('click', () => {
+        if (p.mode) CFG.mode = p.mode;      // per-preset mode (e.g. ham LSB/USB)
+        tuneTo(p.freq, true);
+      });
       row.appendChild(b);
     });
   }
@@ -297,8 +300,8 @@
 
   sdr.on('connect', () => {
     connUI(true);
+    sdr.getReceivers();
     tuneTo(freq, !!CFG.initialFreq); // initial tune (honors ?freq= via CFG.initialFreq)
-    sdr.fft(true);       // start FFT stream for the waterfall strip
     const sql = $('sql');
     if (sql) sdr.setSquelch(parseFloat(sql.value));
   });
@@ -329,6 +332,55 @@
   });
   sdr.on('audio', (samples) => audio.push(samples));
   sdr.on('fft', (f) => { lastFFT = f; if (wf) wf.pushRow(f.bins); });
+
+  // ---------- external receiver awareness ----------
+  /* When the active receiver is an ICOM PCR (audio:false, fft:false), the
+   * panel becomes a remote control head: dim volume, hide the waterfall,
+   * show an EXT RX badge. HF pages also warn when the RTL stick is active. */
+  function applyReceiverCaps(caps) {
+    const panel = document.querySelector('.panel');
+    let badge = $('ext-badge');
+    if (caps && caps.audio === false) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'ext-badge';
+        badge.textContent = 'EXT RX · AUDIO ON RECEIVER SPEAKER';
+        (document.querySelector('.panel-top') || panel).appendChild(badge);
+      }
+      badge.style.display = '';
+      const vol = $('vol');
+      if (vol) { vol.disabled = true; vol.parentElement.style.opacity = 0.4; }
+      if (wfCanvas) wfCanvas.style.display = 'none';
+    } else {
+      if (badge) badge.style.display = 'none';
+      const vol = $('vol');
+      if (vol) { vol.disabled = false; vol.parentElement.style.opacity = ''; }
+      if (wfCanvas && caps && caps.fft !== false) wfCanvas.style.display = '';
+    }
+    // HF pages need the external receiver; warn when the RTL stick is active
+    let warn = $('hf-warn');
+    if (caps && caps.id === 'rtl0' && CFG.band[0] < 24e6) {
+      if (!warn) {
+        warn = document.createElement('div');
+        warn.id = 'hf-warn';
+        warn.textContent = 'RTL stick cannot reach this band — select the ICOM receiver on the HOME page';
+        (document.querySelector('.panel-top') || panel).appendChild(warn);
+      }
+      warn.style.display = '';
+    } else if (warn) {
+      warn.style.display = 'none';
+    }
+  }
+  sdr.on('receivers', (d) => {
+    const active = (d.list || []).find(r => r.id === d.active);
+    applyReceiverCaps(active || null);
+    // switching receiver retunes the panel frequency; FFT only where supported
+    tuneTo(freq, true);
+    if (!active || active.fft !== false) sdr.fft(true);
+  });
+  sdr.on('status', (st) => {
+    if (st.receiver) applyReceiverCaps({id: st.receiver, audio: st.audio, fft: st.fft});
+  });
 
   // ---------- boot ----------
   buildSmeter();
