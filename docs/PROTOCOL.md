@@ -30,6 +30,7 @@
 {"cmd":"icom_config","enable":true,"port":"/dev/ttyUSB0","model":"pcr1000"}
 {"cmd":"icom_state"}
 {"cmd":"power","on":false}
+{"cmd":"volume","level":0.5}
 ```
 
 - `ports`: daemon answers `{"type":"ports","ports":["/dev/ttyUSB0",...]}`
@@ -41,6 +42,9 @@
   "port":"...","model":"pcr1000","connected":true,"power":true}`.
 - `power`: soft power switch on the attached PCR (`H101`/`H100`), works
   from standby; answered indirectly via status/icom_state updates.
+- `volume`: PCR speaker (AF gain) level 0..1. On external receivers the
+  panel's VOLUME slider drives this instead of browser audio. The daemon
+  sets 0.5 at connect since the radio may power up at zero volume.
 
 - `mode`: `wfm` (broadcast FM), `nfm` (marine/land mobile), `am`
   (airband), `usb`, `lsb` (SSB, for future HF).

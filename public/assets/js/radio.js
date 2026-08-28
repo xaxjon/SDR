@@ -161,7 +161,12 @@
   })();
 
   // ---------- sliders / LEDs ----------
-  on($('vol'), 'input', (e) => audio.setVolume(parseFloat(e.target.value)));
+  let extRx = false;                 // ICOM active: volume goes to the radio
+  on($('vol'), 'input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (extRx) sdr.send({cmd: 'volume', level: v});   // PCR AF gain
+    else audio.setVolume(v);
+  });
   on($('sql'), 'input', (e) => sdr.setSquelch(parseFloat(e.target.value)));
 
   function setLed(id, lit) { const el = $(id); if (el) el.classList.toggle('on', !!lit); }
@@ -348,11 +353,13 @@
         (document.querySelector('.panel-top') || panel).appendChild(badge);
       }
       badge.style.display = '';
+      extRx = true;
       const vol = $('vol');
-      if (vol) { vol.disabled = true; vol.parentElement.style.opacity = 0.4; }
+      if (vol) { vol.disabled = false; vol.parentElement.style.opacity = ''; }
       if (wfCanvas) wfCanvas.style.display = 'none';
     } else {
       if (badge) badge.style.display = 'none';
+      extRx = false;
       const vol = $('vol');
       if (vol) { vol.disabled = false; vol.parentElement.style.opacity = ''; }
       if (wfCanvas && caps && caps.fft !== false) wfCanvas.style.display = '';

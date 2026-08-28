@@ -425,6 +425,7 @@ class IcomRadio:
         self.hold_until = 0.0
         self.sql_open = False
         self.level = 0
+        self.volume = 0.5
         self.running = True
         self.connected = False
         self.power = False
@@ -445,6 +446,9 @@ class IcomRadio:
         elif cmd == 'squelch':
             self.squelch = max(0.0, min(1.0, float(msg['level'])))
             self.need_squelch = True
+        elif cmd == 'volume':
+            self.volume = max(0.0, min(1.0, float(msg['level'])))
+            self.need_volume = True
         elif cmd == 'scan':
             self.scan = dict(channels=msg['channels'],
                              dwell=max(0.1, int(msg.get('dwell_ms', 150)) / 1000.0),
@@ -469,6 +473,7 @@ class IcomRadio:
             radio.init_radio()
             radio.tune(self.freq, self.mode)
             radio.set_squelch(self.squelch)
+            radio.set_volume(self.volume)
         except Exception as e:
             self._tx('json', {'type': 'error',
                               'message': 'ICOM open failed: %s' % e})
@@ -492,6 +497,12 @@ class IcomRadio:
                     except Exception:
                         pass
                     self.power_request = None
+                if getattr(self, 'need_volume', False):
+                    try:
+                        radio.set_volume(self.volume)
+                    except Exception:
+                        pass
+                    self.need_volume = False
                 if self.need_retune:
                     radio.tune(self.freq, self.mode)
                     self.need_retune = False
