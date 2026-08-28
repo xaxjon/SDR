@@ -72,6 +72,8 @@ class Pcr:
                 self.buf = self.buf[1:]
                 continue
             frame, self.buf = self.buf[:4], self.buf[4:]
+            if frame[0] == 'H':
+                self._alive_seen = True
             if frame[0] == 'I':
                 if frame[1] == '0':
                     self.squelch_open = frame[2:4] == '07'   # I007=open I004=closed
@@ -84,9 +86,20 @@ class Pcr:
     # -- commands ------------------------------------------------------------
     def init_radio(self):
         with self.lock:
+            self._alive_seen = False
             self._write('H101')          # power on
-            self.power = True
             time.sleep(0.05)
+            self._write('H1?')           # alive check
+            deadline = time.monotonic() + 0.6
+            while time.monotonic() < deadline:
+                self.pump()
+                if self._alive_seen:
+                    break
+                time.sleep(0.02)
+            if not self._alive_seen:
+                raise PcrError('no answer on %s (cable? radio off?)'
+                               % self.port.device)
+            self.power = True
             self._write('G301')          # auto-update squelch/level
             time.sleep(0.05)
             self.pump()

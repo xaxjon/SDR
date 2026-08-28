@@ -650,7 +650,7 @@ def list_serial_ports():
     """Serial device nodes that can actually be opened (filters the phantom
     /dev/ttyS* entries). Includes PTYs so the emulator appears for testing."""
     ports = []
-    for pat in ('/dev/ttyUSB*', '/dev/ttyACM*', '/dev/ttyS*', '/dev/pts/*'):
+    for pat in ('/dev/ttyUSB*', '/dev/ttyACM*', '/dev/ttyS*'):
         for dev in sorted(glob.glob(pat)):
             try:
                 fd = os.open(dev, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
