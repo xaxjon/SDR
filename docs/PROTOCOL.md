@@ -26,7 +26,21 @@
 {"cmd":"stop_sweep"}
 {"cmd":"receivers"}
 {"cmd":"receiver","id":"pcr1000"}
+{"cmd":"ports"}
+{"cmd":"icom_config","enable":true,"port":"/dev/ttyUSB0","model":"pcr1000"}
+{"cmd":"icom_state"}
+{"cmd":"power","on":false}
 ```
+
+- `ports`: daemon answers `{"type":"ports","ports":["/dev/ttyUSB0",...]}`
+  — serial devices that can actually be opened (includes PTYs for testing).
+- `icom_config`: attach (`enable:true`, needs `port`) or detach
+  (`enable:false`) the ICOM worker at runtime; the choice is persisted to
+  `data/receivers.json` and restored on daemon start.
+- `icom_state`: daemon answers `{"type":"icom_state","configured":true,
+  "port":"...","model":"pcr1000","connected":true,"power":true}`.
+- `power`: soft power switch on the attached PCR (`H101`/`H100`), works
+  from standby; answered indirectly via status/icom_state updates.
 
 - `mode`: `wfm` (broadcast FM), `nfm` (marine/land mobile), `am`
   (airband), `usb`, `lsb` (SSB, for future HF).

@@ -45,6 +45,7 @@ class Pcr:
         self.level = 0            # 0..255 raw signal level
         self.freq = 156_800_000
         self.mode = 'nfm'
+        self.power = False
 
     # -- low level -----------------------------------------------------------
     def _write(self, cmd):
@@ -84,6 +85,7 @@ class Pcr:
     def init_radio(self):
         with self.lock:
             self._write('H101')          # power on
+            self.power = True
             time.sleep(0.05)
             self._write('G301')          # auto-update squelch/level
             time.sleep(0.05)
@@ -107,6 +109,13 @@ class Pcr:
     def set_volume(self, level):        # 0.0..1.0
         with self.lock:
             self._write('J40%02x' % max(0, min(255, int(level * 255))))
+            self.pump()
+
+    def set_power(self, on):
+        with self.lock:
+            self._write('H10%d' % (1 if on else 0))
+            self.power = bool(on)
+            time.sleep(0.05)
             self.pump()
 
     def poll(self):

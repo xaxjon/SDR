@@ -25,7 +25,9 @@ Daemon -> client:
 import argparse
 import asyncio
 import faulthandler
+import glob
 import json
+import os
 import queue
 import signal
 import struct
@@ -424,6 +426,9 @@ class IcomRadio:
         self.sql_open = False
         self.level = 0
         self.running = True
+        self.connected = False
+        self.power = False
+        self.power_request = None
 
     def broadcast(self, kind, payload):
         if self.active:
@@ -447,6 +452,8 @@ class IcomRadio:
                              idx=0, t0=0.0, t_tune=0.0)
         elif cmd == 'stop_scan':
             self.scan = None
+        elif cmd == 'power':
+            self.power_request = bool(msg.get('on'))
         elif cmd in ('fft', 'sweep'):
             self.broadcast('json', {'type': 'error',
                                     'message': 'no spectrum on external receiver'})
@@ -465,7 +472,10 @@ class IcomRadio:
         except Exception as e:
             self._tx('json', {'type': 'error',
                               'message': 'ICOM open failed: %s' % e})
+            self.connected = False
             return
+        self.connected = True
+        self.power = radio.power
         self.need_retune = False
         self.need_squelch = False
         last_status = 0.0
@@ -476,6 +486,12 @@ class IcomRadio:
                         self.handle(self.cmdq.get_nowait())
                     except queue.Empty:
                         break
+                if self.power_request is not None:
+                    try:
+                        radio.set_power(self.power_request)
+                    except Exception:
+                        pass
+                    self.power_request = None
                 if self.need_retune:
                     radio.tune(self.freq, self.mode)
                     self.need_retune = False
@@ -523,6 +539,7 @@ class IcomRadio:
 
                 open_, lvl = radio.poll()
                 self.sql_open, self.level = open_, lvl
+                self.power = radio.power
                 if now - last_status > 0.25:
                     last_status = now
                     self._status()
@@ -530,6 +547,7 @@ class IcomRadio:
         except Exception as e:
             self._tx('json', {'type': 'error', 'message': 'ICOM error: %s' % e})
         finally:
+            self.connected = False
             try:
                 radio.close()
             except Exception:
@@ -543,7 +561,8 @@ class IcomRadio:
             'squelch': self.squelch, 'scanning': self.scan is not None,
             'sweeping': False, 'rssi_db': round(rssi, 1),
             'sql_open': bool(self.sql_open), 'scan_label': '',
-            'receiver': self.model, 'audio': False, 'fft': False})
+            'receiver': self.model, 'audio': False, 'fft': False,
+            'power': bool(self.power)})
 
 
 class Hub:
@@ -586,11 +605,46 @@ RECEIVER_INFO = {
                 'audio': False, 'fft': False},
 }
 
+CONFIG_PATH = '/home/jon/kimi/SDRADIO/data/receivers.json'
+
+
+def list_serial_ports():
+    """Serial device nodes that can actually be opened (filters the phantom
+    /dev/ttyS* entries). Includes PTYs so the emulator appears for testing."""
+    ports = []
+    for pat in ('/dev/ttyUSB*', '/dev/ttyACM*', '/dev/ttyS*', '/dev/pts/*'):
+        for dev in sorted(glob.glob(pat)):
+            try:
+                fd = os.open(dev, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+                os.close(fd)
+                ports.append(dev)
+            except OSError:
+                pass
+    return ports
+
+
+def load_config():
+    try:
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_config(cfg):
+    try:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(cfg, f, indent=2)
+    except Exception as e:
+        print('config save failed: %s' % e, file=sys.stderr)
+
 
 class Router:
     """Routes client commands to the active receiver worker."""
 
-    def __init__(self, workers, active_id):
+    def __init__(self, loop, hub, workers, active_id):
+        self.loop = loop
+        self.hub = hub
         self.workers = workers            # {id: Radio|IcomRadio}
         self.active_id = active_id
         for wid, w in workers.items():
@@ -600,12 +654,29 @@ class Router:
     def active(self):
         return self.workers[self.active_id]
 
+    def icom_worker(self):
+        for wid, w in self.workers.items():
+            if wid != 'rtl0':
+                return wid, w
+        return None, None
+
     def route(self, msg):
         cmd = msg.get('cmd')
         if cmd == 'receivers':
             self.broadcast_receivers()
         elif cmd == 'receiver':
             self.switch(msg.get('id'))
+        elif cmd == 'ports':
+            self.active._tx('json', {'type': 'ports',
+                                     'ports': list_serial_ports()})
+        elif cmd == 'icom_config':
+            self.configure_icom(msg)
+        elif cmd == 'icom_state':
+            self.broadcast_icom_state()
+        elif cmd == 'power':
+            _, w = self.icom_worker()
+            if w:
+                w.cmdq.put({'cmd': 'power', 'on': bool(msg.get('on'))})
         else:
             self.active.cmdq.put(msg)
 
@@ -621,11 +692,54 @@ class Router:
         self.active.active = True
         self.broadcast_receivers()
 
+    def configure_icom(self, msg):
+        """Attach/detach the ICOM worker at runtime; persist the config."""
+        enable = bool(msg.get('enable', True))
+        port = msg.get('port')
+        model = msg.get('model', 'pcr1000')
+        if model not in ('pcr1000', 'pcr1500'):
+            model = 'pcr1000'
+        self.detach_icom()
+        cfg = {'icom': {'enabled': False}}
+        if enable and port:
+            w = IcomRadio(self.loop, self.hub, port, model)
+            self.workers[model] = w
+            threading.Thread(target=w.run, daemon=True).start()
+            cfg = {'icom': {'enabled': True, 'port': port, 'model': model}}
+        save_config(cfg)
+        self.broadcast_receivers()
+        # state arrives once the worker has tried the port
+        def delayed_state():
+            time.sleep(1.0)
+            self.broadcast_icom_state()
+        threading.Thread(target=delayed_state, daemon=True).start()
+
+    def detach_icom(self):
+        wid, w = self.icom_worker()
+        if not w:
+            return
+        was_active = (self.active_id == wid)
+        w.running = False
+        del self.workers[wid]
+        if was_active:
+            self.active_id = 'rtl0'
+            self.workers['rtl0'].active = True
+
     def broadcast_receivers(self):
         self.active._tx('json', {
             'type': 'receivers',
             'list': [RECEIVER_INFO[w] for w in self.workers],
             'active': self.active_id})
+
+    def broadcast_icom_state(self):
+        wid, w = self.icom_worker()
+        self.workers['rtl0']._tx('json', {
+            'type': 'icom_state',
+            'configured': w is not None,
+            'port': w.device if w else None,
+            'model': wid,
+            'connected': bool(w and w.connected),
+            'power': bool(w and w.power)})
 
     def stop_all(self):
         for w in self.workers.values():
@@ -668,12 +782,17 @@ def main():
     hub = Hub(loop)
 
     workers = {'rtl0': Radio(loop, hub)}
-    if args.icom_port:
-        workers[args.icom_model] = IcomRadio(loop, hub, args.icom_port,
-                                             args.icom_model)
-    for w in workers.values():
-        threading.Thread(target=w.run, daemon=True).start()
-    router = Router(workers, 'rtl0')
+    router = Router(loop, hub, workers, 'rtl0')
+    threading.Thread(target=workers['rtl0'].run, daemon=True).start()
+
+    # attach the ICOM from saved config; --icom-port overrides config once
+    icom_cfg = (load_config().get('icom') or {})
+    port = args.icom_port or (icom_cfg.get('port')
+                              if icom_cfg.get('enabled') else None)
+    if port:
+        model = args.icom_model if args.icom_port \
+            else icom_cfg.get('model', 'pcr1000')
+        router.configure_icom({'enable': True, 'port': port, 'model': model})
 
     async def handler(ws, path=None):
         await client_handler(ws, path, hub, router)

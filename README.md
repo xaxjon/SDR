@@ -48,19 +48,25 @@ head: tune, mode/filter, squelch, S-meter, and channel scan all work, and
 the SHORTWAVE / HAM SSB / MARINE-AIR HF pages are made for it (the PCRs
 cover 0.01–1300/3300 MHz, all modes).
 
-```bash
-# PCR1000 on a USB-serial adapter, or PCR1500 on its USB cable:
-python3 bin/sdrd.py --icom-port /dev/ttyUSB0 --icom-model pcr1000
-# (or edit start.sh / the systemd unit to add the same flags)
-```
+Setup is done from the **RECEIVER SETTINGS panel on the home screen** — no
+config files to edit:
 
-A receiver dropdown appears on the main menu when more than one receiver
-is present. With the ICOM active, the panel dims its volume control and
-hides the waterfall (the radio has no digitized IF) and shows an
-"EXT RX — audio on receiver speaker" badge.
+![Settings panel](docs/screenshots/settings.png)
 
-No pyserial needed — the driver (`bin/icom.py`) uses stdlib termios.
-`bin/pcr_emulator.py` fakes a PCR1000 on a PTY for hardware-free testing.
+1. Plug in the radio (USB-serial adapter for the PCR1000, USB cable for
+   the PCR1500) and make sure your user is in the `dialout` group
+   (`sudo usermod -aG dialout $USER`, then re-login).
+2. On the home screen, pick the model, choose the detected **COM PORT**
+   (⟳ re-detects), and hit **CONNECT**. The radio powers on and appears in
+   the ACTIVE RECEIVER dropdown. The choice is saved and restored on restart.
+3. The **PCR POWER** switch appears once connected — power the radio on/off
+   from the browser anytime. **REMOVE** detaches it again.
+
+With the ICOM active, radio panels dim their volume control and waterfall
+(the radio has no digitized IF) and show an "EXT RX" badge. No pyserial
+needed — the driver (`bin/icom.py`) uses stdlib termios.
+`bin/pcr_emulator.py` fakes a PCR1000 on a PTY for hardware-free testing,
+and `--icom-port/--icom-model` CLI flags remain as an override.
 
 (Without an ICOM, HF is still possible later via a ~$40 upconverter or a
 dongle with direct sampling like the RTL-SDR Blog V4 — the USB/LSB
