@@ -1,0 +1,16 @@
+{
+  "service": "airband",
+  "mode": "am",
+  "band": {"start": 118000000, "stop": 136975000},
+  "spacings": {"25 kHz": 25000, "8.33 kHz": 8333},
+  "default_spacing": 25000,
+  "presets": [
+    {"label": "Emergency", "freq": 121500000},
+    {"label": "Air-Air", "freq": 123450000},
+    {"label": "Flight Service", "freq": 122200000},
+    {"label": "Ground (typ.)", "freq": 121900000},
+    {"label": "Tower (typ.)", "freq": 118700000},
+    {"label": "ATIS (typ.)", "freq": 126000000},
+    {"label": "Approach (typ.)", "freq": 119700000}
+  ]
+}

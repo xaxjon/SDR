@@ -1,0 +1,15 @@
+{
+  "service": "vhf",
+  "mode": "nfm",
+  "band": {"start": 150000000, "stop": 174000000},
+  "step": 12500,
+  "presets": [
+    {"label": "MURS 1", "freq": 151820000},
+    {"label": "MURS 2", "freq": 151880000},
+    {"label": "MURS 3", "freq": 151940000},
+    {"label": "MURS 4", "freq": 154570000},
+    {"label": "MURS 5", "freq": 154600000},
+    {"label": "2m calling", "freq": 146520000},
+    {"label": "Rail (EU typ.)", "freq": 151250000}
+  ]
+}

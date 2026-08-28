@@ -1,0 +1,54 @@
+/* SDRADIO skin: fm — black hi-fi tuner, blue display */
+
+body.skin-fm {
+  --page-bg: #060708;
+  --panel-hi: #232527;
+  --panel-lo: #0e0f11;
+  --panel-edge: #31353a;
+  --panel-text: #a9b0b8;
+  --brand-color: #d7dde3;
+  --lcd-bg: #020608;
+  --lcd-fg: #46b8ff;                /* ice-blue hi-fi display */
+  --lcd-glow: rgba(70, 184, 255, 0.6);
+  --lcd-dim: rgba(70, 184, 255, 0.42);
+  --btn-hi: #2e3236;
+  --btn-lo: #16181b;
+  --btn-edge: #0a0b0d;
+  --btn-text: #cfd6dc;
+  --btn-active-hi: #1a4a6a;
+  --btn-active-lo: #0e2c42;
+  --accent: #46b8ff;
+  --led-on: #ff4444;
+  --led-sql-on: #46e0ff;
+  --knob-hi: #3c4147;
+  --knob-lo: #101214;
+  --knob-tick: #59626c;
+  --input-bg: #0a0e12;
+  --input-fg: #bfe4ff;
+}
+
+/* brushed-metal effect */
+body.skin-fm .panel {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border-radius: 8px;
+}
+
+body.skin-fm #lcd-main {
+  letter-spacing: 10px;
+}
+
+/* silver transport-style preset buttons */
+body.skin-fm .pbtn.preset {
+  background: linear-gradient(180deg, #c9ced4, #878e96);
+  color: #181c20;
+  border-color: #5a616a;
+  box-shadow: 0 4px 0 #4a5058, 0 5px 10px rgba(0,0,0,0.5),
+              inset 0 1px 0 rgba(255,255,255,0.8);
+}
+body.skin-fm .pbtn.preset:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #4a5058;
+}
+body.skin-fm .pbtn.preset .preset-freq { color: #0a3a55; opacity: 1; }

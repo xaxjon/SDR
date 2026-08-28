@@ -1,0 +1,11 @@
+{
+  "service": "fm",
+  "mode": "wfm",
+  "band": {"start": 87500000, "stop": 108000000},
+  "step": 100000,
+  "presets": [
+    {"label": "Local 107.3", "freq": 107282000},
+    {"label": "Local 106.7", "freq": 106735000},
+    {"label": "Local 104.2", "freq": 104185000}
+  ]
+}

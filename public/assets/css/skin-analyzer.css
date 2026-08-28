@@ -1,0 +1,51 @@
+/* SDRADIO skin: analyzer — dark lab instrument */
+
+body.skin-analyzer {
+  --page-bg: #0b0d10;
+  --panel-hi: #23272e;
+  --panel-lo: #12151a;
+  --panel-edge: #353c46;
+  --panel-text: #aebac6;
+  --brand-color: #dfe8f0;
+  --accent: #57c8ff;
+  --btn-hi: #31383f;
+  --btn-lo: #1a1e24;
+  --btn-edge: #0c0e12;
+  --btn-text: #d2dde8;
+  --btn-active-hi: #1a4a5e;
+  --btn-active-lo: #0e2c3a;
+  --led-on: #57c8ff;
+  --led-off: #122830;
+  --input-bg: #0a0e12;
+  --input-fg: #9ae0ff;
+  --wf-border: #04060a;
+}
+
+body.skin-analyzer .panel {
+  border-radius: 6px;
+  background-image:
+    linear-gradient(90deg, rgba(87,200,255,0.03), transparent 20%, transparent 80%, rgba(87,200,255,0.03)),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+}
+
+body.skin-analyzer .pagetitle { color: #57c8ff; }
+
+body.skin-analyzer .field input {
+  border-color: #2a3540;
+  text-align: right;
+}
+
+body.skin-analyzer .analyzer-state { color: #57c8ff; }
+
+body.skin-analyzer .pbtn.big {
+  letter-spacing: 2px;
+}
+
+/* scope-style phosphor bezel around the displays */
+body.skin-analyzer #trace,
+body.skin-analyzer .wf-big {
+  border-color: #10161c;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.95),
+              0 0 0 1px rgba(87,200,255,0.08),
+              0 1px 0 rgba(255,255,255,0.08);
+}

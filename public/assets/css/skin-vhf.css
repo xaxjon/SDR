@@ -1,0 +1,58 @@
+/* SDRADIO skin: vhf — rugged industrial two-way radio */
+
+body.skin-vhf {
+  --page-bg: #141310;
+  --panel-hi: #3d3a2e;
+  --panel-lo: #211f18;
+  --panel-edge: #57534a;
+  --panel-text: #c9c4b2;
+  --brand-color: #f0ead6;
+  --lcd-bg: #140f04;
+  --lcd-fg: #ffa028;                /* orange dot-matrix */
+  --lcd-glow: rgba(255, 160, 40, 0.6);
+  --lcd-dim: rgba(255, 160, 40, 0.42);
+  --btn-hi: #4c4838;
+  --btn-lo: #2a2719;
+  --btn-edge: #14120a;
+  --btn-text: #e8e2cc;
+  --btn-active-hi: #7a5a1a;
+  --btn-active-lo: #523c0e;
+  --accent: #ffd75e;
+  --led-on: #ff4422;
+  --led-sql-on: #a8ff3e;
+  --knob-hi: #57534a;
+  --knob-lo: #1c1a14;
+  --knob-tick: #8d887a;
+  --input-bg: #171410;
+  --input-fg: #ffd9a0;
+}
+
+/* heavy industrial chassis: thicker frame, ribbed edges */
+body.skin-vhf .panel {
+  border: 3px solid var(--panel-edge);
+  border-radius: 10px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.14) 0 6px, transparent 6px 12px),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+}
+
+/* chunky rubber buttons */
+body.skin-vhf .pbtn, body.skin-vhf .kbtn {
+  border-width: 2px;
+  border-radius: 9px;
+  text-transform: uppercase;
+}
+
+/* dot-matrix digits */
+body.skin-vhf #lcd-main {
+  letter-spacing: 8px;
+  text-shadow: 0 0 4px var(--lcd-glow), 0 0 14px var(--lcd-glow);
+}
+
+body.skin-vhf .knob {
+  border-width: 3px;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.7),
+              inset 0 -5px 10px rgba(0,0,0,0.6),
+              inset 0 2px 3px rgba(255,255,255,0.15);
+}
+body.skin-vhf .knob::after { background: #ffd75e; width: 7px; margin-left: -3.5px; }

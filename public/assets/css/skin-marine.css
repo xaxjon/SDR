@@ -1,0 +1,67 @@
+/* SDRADIO skin: marine — light gray Icom-style marine radio */
+
+body.skin-marine {
+  --page-bg: #23272b;
+  --panel-hi: #d4d8dc;
+  --panel-lo: #a9aeb4;
+  --panel-edge: #8b9097;
+  --panel-text: #3a4046;
+  --brand-color: #1d2226;
+  --lcd-bg: #0d1417;
+  --lcd-fg: #ffc46b;                /* warm amber marine LCD */
+  --lcd-glow: rgba(255, 196, 107, 0.55);
+  --lcd-dim: rgba(255, 196, 107, 0.42);
+  --btn-hi: #565e66;
+  --btn-lo: #33393f;
+  --btn-edge: #1c2023;
+  --btn-text: #eef1f4;
+  --btn-active-hi: #2a5a8a;
+  --btn-active-lo: #1a3c5e;
+  --accent: #0f5a94;                /* marine blue */
+  --led-on: #d42a2a;
+  --led-sql-on: #1fbf4d;
+  --knob-hi: #6a737c;
+  --knob-lo: #2c3136;
+  --knob-tick: #5a636c;
+  --input-bg: #10161a;
+  --input-fg: #ffd9a0;
+  --wf-border: #202428;
+}
+
+body.skin-marine .panel {
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.7),
+    inset 0 -2px 6px rgba(0,0,0,0.25);
+}
+body.skin-marine .panel::before { opacity: 0.55; }
+
+body.skin-marine .brandplate .brand,
+body.skin-marine .brandplate .model {
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+body.skin-marine .pagetitle {
+  color: #0f5a94;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+body.skin-marine .ctl-label { text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+body.skin-marine .slider-block label { text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+
+/* chunky white-topped channel keys like a deck radio */
+body.skin-marine #ch-up, body.skin-marine #ch-dn {
+  background: linear-gradient(180deg, #f2f4f6, #c2c8ce);
+  color: #2a3036;
+  border-color: #8b9097;
+  box-shadow: 0 4px 0 #787e85, 0 5px 10px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,255,255,0.9);
+}
+body.skin-marine #ch-up:active, body.skin-marine #ch-dn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #787e85;
+}
+
+body.skin-marine .region-sel {
+  background: linear-gradient(180deg, #f2f4f6, #c2c8ce);
+  color: #2a3036;
+  border-color: #8b9097;
+}

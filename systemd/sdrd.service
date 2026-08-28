@@ -1,0 +1,14 @@
+[Unit]
+Description=SDRADIO SDR daemon (RTL2832U WebSocket backend)
+After=multi-user.target
+
+[Service]
+Type=simple
+User=jon
+WorkingDirectory=/home/jon/kimi/SDRADIO
+ExecStart=/usr/bin/python3 /home/jon/kimi/SDRADIO/bin/sdrd.py --host 0.0.0.0 --port 8765
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

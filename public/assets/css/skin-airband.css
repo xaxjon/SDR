@@ -1,0 +1,42 @@
+/* SDRADIO skin: airband — dark scanner, green/amber LCD */
+
+body.skin-airband {
+  --page-bg: #0a0c0a;
+  --panel-hi: #2c312c;
+  --panel-lo: #161916;
+  --panel-edge: #3d443d;
+  --panel-text: #b7c2b4;
+  --brand-color: #e6efe2;
+  --lcd-bg: #0b0d05;
+  --lcd-fg: #ffb347;                /* amber digits */
+  --lcd-glow: rgba(255, 179, 71, 0.55);
+  --lcd-dim: rgba(255, 179, 71, 0.4);
+  --btn-hi: #3a4038;
+  --btn-lo: #22261f;
+  --btn-edge: #10130e;
+  --btn-text: #d7e0d0;
+  --btn-active-hi: #6a5a2a;
+  --btn-active-lo: #4a3d18;
+  --accent: #8dff6a;
+  --led-on: #ff5544;
+  --led-sql-on: #8dff6a;
+  --knob-hi: #4a524a;
+  --knob-lo: #181c17;
+  --knob-tick: #7d8a76;
+  --input-bg: #12150e;
+  --input-fg: #ffd9a0;
+}
+
+body.skin-airband .panel {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+}
+
+/* amber main digits, green secondary labels */
+body.skin-airband #lcd-sub,
+body.skin-airband .preset-freq {
+  color: rgba(141, 255, 106, 0.75);
+}
+body.skin-airband .kbtn.wide { color: #ffb347; }
+body.skin-airband .pagetitle { color: #8dff6a; }
