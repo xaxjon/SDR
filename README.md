@@ -146,4 +146,4 @@ behind a reverse proxy with auth if you expose it further.
 
 ## License
 
-MIT
+GPL-3.0 — see [LICENSE](LICENSE).
