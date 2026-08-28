@@ -403,6 +403,22 @@
   sdr.on('receivers', (d) => {
     const active = (d.list || []).find(r => r.id === d.active);
     applyReceiverCaps(active || null);
+    // populate the per-page receiver switcher (only when there's a choice)
+    const sw = $('rx-switch');
+    if (sw && (d.list || []).length > 1) {
+      if (!sw.options.length) {
+        d.list.forEach(r => {
+          const o = document.createElement('option');
+          o.value = r.id; o.textContent = r.name;
+          sw.appendChild(o);
+        });
+        sw.addEventListener('change', () => sdr.setReceiver(sw.value));
+      }
+      sw.value = d.active;
+      sw.style.display = '';
+    } else if (sw) {
+      sw.style.display = 'none';
+    }
     // switching receiver retunes the panel frequency; FFT only where supported
     tuneTo(freq, true);
     if (!active || active.fft !== false) sdr.fft(true);

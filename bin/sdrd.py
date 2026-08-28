@@ -221,16 +221,27 @@ class Radio:
 
     # -- worker -------------------------------------------------------------
     def run(self):
-        try:
-            sdr = RtlSdr()
-            sdr.set_sample_rate(SAMPLE_RATE)
-            sdr.set_format(0x40000)
-            sdr.set_center_freq(self.freq)
-            sdr.start()
-        except Exception as e:
-            self.broadcast('json', {'type': 'error',
-                                    'message': 'SDR open failed: %s' % e})
-            return
+        # retry until the stick appears (it may be plugged in later)
+        sdr = None
+        reported = False
+        while self.running and sdr is None:
+            try:
+                sdr = RtlSdr()
+                sdr.set_sample_rate(SAMPLE_RATE)
+                sdr.set_format(0x40000)
+                sdr.set_center_freq(self.freq)
+                sdr.start()
+            except Exception as e:
+                sdr = None
+                if not reported:
+                    self.broadcast('json', {
+                        'type': 'error',
+                        'message': 'SDR open failed (%s) — retrying' % e})
+                    reported = True
+                for _ in range(50):                 # 5 s, responsive shutdown
+                    if not self.running:
+                        return
+                    time.sleep(0.1)
         self.need_retune = True
         demod = Demod(self.mode)
         gen = sdr.read()
@@ -470,17 +481,30 @@ class IcomRadio:
     # -- worker --------------------------------------------------------------
     def run(self):
         sys.path.insert(0, '/home/jon/kimi/SDRADIO/bin')
-        try:
-            from icom import Pcr
-            radio = Pcr(self.device)
-            radio.init_radio()
-            radio.tune(self.freq, self.mode)
-            radio.set_squelch(self.squelch)
-            radio.set_volume(self.volume)
-        except Exception as e:
-            self._tx('json', {'type': 'error',
-                              'message': 'ICOM open failed: %s' % e})
-            self.connected = False
+        from icom import Pcr
+        # retry until the serial port appears/answers (radio may be plugged
+        # in or powered later)
+        radio = None
+        reported = False
+        while self.running and radio is None:
+            try:
+                radio = Pcr(self.device)
+                radio.init_radio()
+                radio.tune(self.freq, self.mode)
+                radio.set_squelch(self.squelch)
+                radio.set_volume(self.volume)
+            except Exception as e:
+                radio = None
+                if not reported:
+                    self._tx('json', {'type': 'error',
+                                      'message': 'ICOM %s not ready (%s) — retrying'
+                                                 % (self.device, e)})
+                    reported = True
+                for _ in range(50):
+                    if not self.running:
+                        return
+                    time.sleep(0.1)
+        if radio is None:
             return
         self.connected = True
         self.power = radio.power

@@ -138,7 +138,9 @@ $jsConfig = [
   <div class="panel-top">
     <div class="brandplate"><span class="brand">SDRADIO</span><span class="model"><?= htmlspecialchars($cfg['model']) ?></span></div>
     <div class="pagetitle"><?= htmlspecialchars($cfg['title']) ?></div>
-    <div class="connbox"><span id="conn-led" class="led"></span><span id="conn-text">OFFLINE</span></div>
+    <div class="connbox"><span id="conn-led" class="led"></span><span id="conn-text">OFFLINE</span>
+      <select id="rx-switch" class="rx-select" style="display:none" title="Active receiver"></select>
+    </div>
     <a class="homebtn" href="index.php">⌂ HOME</a>
   </div>
 

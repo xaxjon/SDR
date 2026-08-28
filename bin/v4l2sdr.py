@@ -67,7 +67,14 @@ class SdrError(Exception):
 class RtlSdr:
     """Owns the device. One instance per daemon."""
 
-    def __init__(self, dev='/dev/swradio0'):
+    def __init__(self, dev=None):
+        if dev is None:
+            # stick may enumerate as swradio1+ after a replug
+            import glob as _glob
+            nodes = sorted(_glob.glob('/dev/swradio*'))
+            if not nodes:
+                raise SdrError('no /dev/swradio* device (stick plugged in?)')
+            dev = nodes[0]
         self.dev = dev
         self.fd = os.open(dev, os.O_RDWR)
         self.buffers = []
