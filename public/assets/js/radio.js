@@ -23,12 +23,16 @@
 
   // ---------- helpers ----------
   function fmtFreq(f) { return (f / 1e6).toFixed(CFG.decimals); }
-  /* Band edges define scan range / step grid origin; the tuner itself covers
-   * 24–1766 MHz, so explicit tunes (presets, keypad, ?freq=, waterfall click)
-   * may land slightly outside the nominal service band (e.g. FM preset at
-   * 108.027). */
-  const TUNER_LO = 24e6, TUNER_HI = 1766e6;
-  function clampBand(f) { return Math.max(TUNER_LO, Math.min(TUNER_HI, f)); }
+  /* Band edges define scan range / step grid origin; explicit tunes
+   * (presets, keypad, ?freq=, waterfall click) may exceed the band.
+   * Frequency limits depend on the ACTIVE receiver. */
+  const RX_LIMITS = {
+    rtl0:    [24e6, 1766e6],
+    pcr1000: [10e3, 1300e6],
+    pcr1500: [10e3, 3300e6],
+  };
+  let rxLimits = RX_LIMITS.rtl0;
+  function clampBand(f) { return Math.max(rxLimits[0], Math.min(rxLimits[1], f)); }
   function snap(f) { return CFG.band[0] + Math.round((f - CFG.band[0]) / step) * step; }
 
   function channelAt(f) {
@@ -85,9 +89,11 @@
   const audio = new SDRAudio();
 
   function tuneTo(f, noSnap) {
-    freq = clampBand(noSnap ? f : snap(f));
+    /* keep the requested freq unclamped so a receiver switch doesn't lose
+     * it; clamp only what we actually send to the current receiver */
+    freq = noSnap ? f : snap(f);
     updateDisplay();
-    sdr.tune(freq, CFG.mode);
+    sdr.tune(clampBand(freq), CFG.mode);
   }
 
   on($('tune-up'), 'click', () => tuneTo(freq + step));
@@ -276,11 +282,26 @@
       b.querySelector('.preset-label').textContent = p.label;
       b.querySelector('.preset-freq').textContent = fmtFreq(p.freq);
       b.addEventListener('click', () => {
-        if (p.mode) CFG.mode = p.mode;      // per-preset mode (e.g. ham LSB/USB)
+        if (p.mode) setMode(p.mode);        // per-preset mode (e.g. ham LSB/USB)
         tuneTo(p.freq, true);
       });
       row.appendChild(b);
     });
+  }
+
+  // ---------- mode selector (HF pages) ----------
+  const modeRow = $('mode-row');
+  function setMode(m) {
+    CFG.mode = m;
+    const badge = $('flag-mode');
+    if (badge) badge.textContent = m.toUpperCase();
+    if (modeRow) modeRow.querySelectorAll('.mode-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === m));
+  }
+  if (modeRow) {
+    modeRow.querySelectorAll('.mode-btn').forEach(b =>
+      b.addEventListener('click', () => { setMode(b.dataset.mode); tuneTo(freq, true); }));
+    setMode(CFG.mode);
   }
 
   // ---------- waterfall strip ----------
@@ -344,6 +365,7 @@
    * show an EXT RX badge. HF pages also warn when the RTL stick is active. */
   function applyReceiverCaps(caps) {
     const panel = document.querySelector('.panel');
+    if (caps && caps.id && RX_LIMITS[caps.id]) rxLimits = RX_LIMITS[caps.id];
     let badge = $('ext-badge');
     if (caps && caps.audio === false) {
       if (!badge) {

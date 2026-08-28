@@ -65,7 +65,7 @@ $SERVICES = [
         'decimals' => 3,
         'knobSpan' => 100000,
         'defaultFreq' => 10000000,
-        'features' => ['presets' => true],
+        'features' => ['presets' => true, 'modes' => true],
     ],
     'ham' => [
         'title'    => 'HAM SSB RECEIVER',
@@ -78,7 +78,7 @@ $SERVICES = [
         'decimals' => 4,
         'knobSpan' => 100000,
         'defaultFreq' => 14200000,
-        'features' => ['presets' => true],
+        'features' => ['presets' => true, 'modes' => true],
     ],
     'marinehf' => [
         'title'    => 'MARINE / AIR HF',
@@ -91,7 +91,7 @@ $SERVICES = [
         'decimals' => 4,
         'knobSpan' => 100000,
         'defaultFreq' => 8294000,
-        'features' => ['presets' => true],
+        'features' => ['presets' => true, 'modes' => true],
     ],
 ];
 
@@ -101,7 +101,7 @@ if (!isset($SERVICES[$svc])) {
     exit;
 }
 $cfg = $SERVICES[$svc];
-$feat = $cfg['features'] + ['presets' => false, 'spacing' => false, 'channels' => false, 'region' => false];
+$feat = $cfg['features'] + ['presets' => false, 'spacing' => false, 'channels' => false, 'region' => false, 'modes' => false];
 
 $initialFreq = null;
 if (isset($_GET['freq'])) {
@@ -152,7 +152,7 @@ $jsConfig = [
         <div class="lcd-right">
           <div class="lcd-flags">
             <span id="flag-sql" class="lcd-flag">SQL</span>
-            <span class="lcd-flag static"><?= strtoupper($cfg['mode']) ?></span>
+            <span id="flag-mode" class="lcd-flag static"><?= strtoupper($cfg['mode']) ?></span>
           </div>
           <div class="smeter" id="smeter"></div>
         </div>
@@ -162,6 +162,16 @@ $jsConfig = [
   </div>
 
   <canvas id="wf" class="wf-strip" title="Click to tune"></canvas>
+
+  <?php if ($feat['modes']): ?>
+  <div class="mode-row" id="mode-row">
+    <button class="pbtn mode-btn" data-mode="lsb">LSB</button>
+    <button class="pbtn mode-btn" data-mode="usb">USB</button>
+    <button class="pbtn mode-btn" data-mode="cw">CW</button>
+    <button class="pbtn mode-btn" data-mode="am">AM</button>
+    <button class="pbtn mode-btn" data-mode="amw">AM WIDE</button>
+  </div>
+  <?php endif; ?>
 
   <div class="controls">
     <div class="ctl-col knob-col">

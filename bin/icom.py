@@ -22,9 +22,9 @@ import time
 
 from serialport import SerialPort, SerialError
 
-MODES = {'lsb': 0, 'usb': 1, 'am': 2, 'cw': 3, 'nfm': 5, 'wfm': 6}
-# sensible default IF filter per mode
-FILTERS = {'lsb': 0, 'usb': 0, 'am': 2, 'cw': 0, 'nfm': 2, 'wfm': 4}
+MODES = {'lsb': 0, 'usb': 1, 'am': 2, 'cw': 3, 'amw': 2, 'nfm': 5, 'wfm': 6}
+# sensible default IF filter per mode (amw = AM through the wide 50 kHz filter)
+FILTERS = {'lsb': 0, 'usb': 0, 'am': 2, 'cw': 0, 'amw': 3, 'nfm': 2, 'wfm': 4}
 
 
 class PcrError(Exception):

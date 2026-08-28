@@ -77,32 +77,34 @@ class Demod:
 
     def __init__(self, mode):
         self.mode = mode
+        self.m = {'cw': 'usb', 'amw': 'am'}.get(mode, mode)  # RTL aliases
+        m = self.m
         self.last = 0j
         self.deemph_y = 0.0
         self.dc_x = 0.0      # DC blocker state
         self.dc_y = 0.0
-        if mode == 'wfm':
+        if m == 'wfm':
             self.f1 = StreamingFIR(wsinc(90e3, 51, SAMPLE_RATE))
             self.f2 = StreamingFIR(wsinc(15e3, 31, 240e3))
             self.tau = 75e-6
             self.fm_scale = 240e3 / (2 * np.pi * 75e3)
-        elif mode == 'nfm':
+        elif m == 'nfm':
             self.f1 = StreamingFIR(wsinc(100e3, 31, SAMPLE_RATE))
             self.f2 = StreamingFIR(wsinc(8e3, 31, 480e3))
             self.fa = StreamingFIR(wsinc(3.4e3, 31, 96e3))
             self.tau = 750e-6
             self.fm_scale = 96e3 / (2 * np.pi * 5e3)
-        elif mode == 'am':
+        elif m == 'am':
             self.f1 = StreamingFIR(wsinc(100e3, 31, SAMPLE_RATE))
             self.f2 = StreamingFIR(wsinc(6e3, 31, 480e3))
             self.fa = StreamingFIR(wsinc(4e3, 31, 96e3))
-        elif mode in ('usb', 'lsb'):
+        elif m in ('usb', 'lsb'):
             self.f1 = StreamingFIR(wsinc(100e3, 31, SAMPLE_RATE))
             # complex bandpass: shift a 1.5 kHz lowpass to +/-1.65 kHz
             lp = wsinc(1.5e3, 63, 96e3)
-            m = np.arange(63)
-            shift = 1.65e3 if mode == 'usb' else -1.65e3
-            bp = lp * np.exp(1j * 2 * np.pi * shift / 96e3 * m)
+            mi = np.arange(63)
+            shift = 1.65e3 if m == 'usb' else -1.65e3
+            bp = lp * np.exp(1j * 2 * np.pi * shift / 96e3 * mi)
             self.fssb = StreamingFIR(bp)
             self.f2 = StreamingFIR(wsinc(100e3, 31, SAMPLE_RATE))
         else:
@@ -133,7 +135,8 @@ class Demod:
         return y
 
     def process(self, iq):
-        if self.mode == 'wfm':
+        mode = getattr(self, 'm', self.mode)
+        if mode == 'wfm':
             f = self.f1(iq)[::10]                       # 240 kHz
             d = np.angle(f[1:] * np.conj(f[:-1])) * self.fm_scale
             au = self.f2(d.astype(np.complex128))[::5]  # 48 kHz
@@ -142,11 +145,11 @@ class Demod:
             return au, chan_power
         f = self.f2(self.f1(iq)[::5])[::5]              # 96 kHz complex
         chan_power = float(np.mean(np.abs(f) ** 2))
-        if self.mode == 'nfm':
+        if mode == 'nfm':
             d = np.angle(f[1:] * np.conj(f[:-1])) * self.fm_scale
             au = np.real(self.fa(d.astype(np.complex128)))[::2]
             au = self._dcblock(self._deemph(au, 48000.0))
-        elif self.mode == 'am':
+        elif mode == 'am':
             env = np.abs(f)
             au = np.real(self.fa(env.astype(np.complex128)))[::2]
             mean = np.mean(au) + 1e-9
